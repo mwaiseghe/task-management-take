@@ -54,7 +54,18 @@ class Task {
         let difference = today - deadline;
         let days = Math.floor(difference / (1000 * 60 * 60 * 24));
         return days;
-    }        
+    }     
+    
+    updateTaskObject(id) {
+        let item = TaskItems.find(task => task.id === id);
+        item.title = this.title;
+        item.description = this.description;
+        item.deadline = this.deadline;
+        item.completed = this.completed;
+
+        storedTasks.splice(storedTasks.indexOf(item), 1, item); // update item in storedTasks
+        localStorage.setItem('tasks', JSON.stringify(storedTasks)); // update storedTasks in local storage
+    }
 
     
     submitTask() {
@@ -68,6 +79,13 @@ class Task {
         localStorage.setItem('tasks', JSON.stringify(storedTasks));
     }
 
+    deleteTask(id) {
+        let task = document.querySelector(`#task-${id}`);
+        task.remove();
+        storedTasks.splice(storedTasks.indexOf(this), 1);
+        localStorage.setItem('tasks', JSON.stringify(storedTasks));
+    }
+
     editTask(id) {
         let task = document.querySelector(`#task-${id}`);
         let title = task.querySelector('.name h3').textContent;
@@ -75,27 +93,56 @@ class Task {
         let deadline = task.querySelector('.deadline p').textContent;
         let completed = task.classList.contains('completed');
 
-        let taskToEdit = new Task(id, title, description, deadline, completed);
-        storedTasks.splice(storedTasks.indexOf(this), 1, taskToEdit);
-        localStorage.setItem('tasks', JSON.stringify(storedTasks));
-    }
+        let formParent = document.querySelector('.to-do-form');
+        formParent.innerHTML = `
+                    <form action="" method="post" id="edit-task-form">
+                        <div class="form-group">
+                            <label for="title">Title</label>
+                            <input type="text" name="title" id="title" placeholder="Enter Title">
+                        </div>
+    
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea name="description" id="description" cols="30" rows="10" placeholder="Enter Description"></textarea>
+                        </div>
+    
+                        <div class="form-group">
+                            <label for="deadline">Deadline</label>
+                            <input type="date" name="deadline" id="deadline">
+                        </div>
 
-    deleteTask() {
-        let task = document.querySelector(`#task-${this.id}`);
-        task.remove();
-        storedTasks.splice(storedTasks.indexOf(this), 1);
-        localStorage.setItem('tasks', JSON.stringify(storedTasks));
+                        <div class="submit-button">
+                            <button id="submit-btn" type="submit">Edit Task</button>
+                        </div>
+                    </form>
+        `;
+        let editTaskForm = document.querySelector('#edit-task-form');
+        editTaskForm.title.value = title;
+        editTaskForm.description.value = description;
+        editTaskForm.deadline.value = deadline.split(' ')[1];
+
+        editTaskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let task = new Task(id, editTaskForm.title.value, editTaskForm.description.value, editTaskForm.deadline.value, completed);
+            console.log(task);
+            task.updateTaskObject(id);
+            editTaskForm.reset();
+            location.reload();
+        }
+        );
+
     }
 
     markCompleted() {
         let task = document.querySelector(`#task-${this.id}`);
         task.classList.add('completed');
         this.completed = true;
-        storedTasks.splice(storedTasks.indexOf(this), 1);
+
+        this.updateTaskObject(this.id);
+        
         storedCompletedTasks.push(this);
         localStorage.setItem('tasks', JSON.stringify(storedTasks));
         localStorage.setItem('completedTasks', JSON.stringify(storedCompletedTasks));
-        task.remove();
     }
 }
 
@@ -164,48 +211,26 @@ class App {
 
     convertJsonToCompletedTask() {
         let stored_completed_tasks = JSON.parse(localStorage.getItem('completedTasks'));
-        const completedTaskObjects = stored_completed_tasks.map(
-            task => new CompletedTasks(
-                task.id, task.title, task.description, task.deadline, task.completed
-                ));
+        const completedTaskObjects = stored_completed_tasks.map(task => new CompletedTasks(
+            task.id, task.title, task.description, task.deadline, task.completed
+            ));
         CompletedTaskItems = completedTaskObjects;
     }
 
+
     convertJsonToUncompletedTask() {
-        let stored_uncompleted_tasks = JSON.parse(localStorage.getItem('uncompletedTasks'));
-        const uncompletedTaskObjects = stored_uncompleted_tasks.map(
-            task => new UncompletedTasks(
-                task.id, task.title, task.description, task.deadline, task.completed
-                ));
+        let uncompleted_items = TaskItems.filter(task => task.completed === false);
+        const uncompletedTaskObjects = uncompleted_items.map(task => new UncompletedTasks(
+            task.id, task.title, task.description, task.deadline, task.completed
+            ));
         UncompletedTaskItems = uncompletedTaskObjects;
     }
+    
 
-    editTask(id) {
-        let form = document.querySelector('#new-task-form');
-        // change id name to edit-task-form
-        form.id = 'edit-task-form'; 
-        form.classList.add('edit-mode');
-        let task = document.querySelector(`#task-${id}`);
-        let title = task.querySelector('.name h3').textContent;
-        let description = task.querySelector('.description p').textContent;
-        let deadline = task.querySelector('.deadline p').textContent;
-        deadline = new Date(deadline).toISOString().slice(0, 10);
-        let completed = task.classList.contains('completed');
-
-        document.querySelector('#title').value = title;
-        document.querySelector('#description').value = description;
-        document.querySelector('#deadline').value = deadline;
-
-        let editBtn = document.querySelector('.edit-btn');
-        editBtn.addEventListener('click', () => {
-            Task.editTask(id);
-        }
-        );
-
-    }
-
-    displayTasks() {
-        TaskItems.forEach(task => {
+    displayTasks(taskItems) {
+        taskList.innerHTML = '';
+        taskItems.forEach(task => {
+            
             let taskItem = document.createElement('div');
             taskItem.classList.add('single-task-card');
             taskItem.id = `task-${task.id}`;
@@ -217,6 +242,7 @@ class App {
                 <div class="actions">
                     <button class="edit-btn">Edit</button>
                     <button class="delete-btn">Delete</button>
+                    <button class="mark-complete-btn">Mark Complete</button>
                 </div>
             </div>
             <div class="description">
@@ -236,18 +262,26 @@ class App {
 
             let editBtn = taskItem.querySelector('.edit-btn');
             editBtn.addEventListener('click', () => {
-                this.editTask(task.id);
-            }
-            );
+                task.editTask(task.id);
+            });
 
+            let deleteBtn = taskItem.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                task.deleteTask(task.id);
+            });
+
+            let markCompleteBtn = taskItem.querySelector('.mark-complete-btn');
+            if (task.completed) {
+                markCompleteBtn.innerHTML = 'Mark Uncompleted';
+            }
+
+            markCompleteBtn.addEventListener('click', () => {
+                task.markCompleted();
+                markCompleteBtn.innerHTML = 'Mark Uncompleted';
+            });
         });
     }
-
-
-
-    
 }
-
 
 let addTaskForm = document.querySelector('#new-task-form');
 addTaskForm.addEventListener('submit', (e) => {
@@ -260,8 +294,31 @@ addTaskForm.addEventListener('submit', (e) => {
 );
 
 
+
+
 let app = new App();
 app.convertJsonToTask();
-app.displayTasks();
+app.displayTasks(TaskItems);
 
+let tasksToView = document.querySelector('#tasks-to-view');
+tasksToView.addEventListener('change', () => {
+    if (tasksToView.value === 'completed') {
+        let completedTasks = new App();
+        let completedTasksToView = completedTasks.convertJsonToCompletedTask();
+        completedTasks.displayTasks(CompletedTaskItems);
+        console.log('completed tasks');
+    }
+    if (tasksToView.value === 'incomplete') {
+        let uncompletedTasks = new App();
+        let uncompletedTasksToView = uncompletedTasks.convertJsonToUncompletedTask();
+        uncompletedTasks.displayTasks(UncompletedTaskItems);
+        console.log('uncompleted tasks');
+    }
+    if (tasksToView.value === 'all') {
+        let allTasks = new App();
+        let allTasksToView = allTasks.convertJsonToTask();
+        allTasks.displayTasks(TaskItems);
+        console.log('all tasks');
+    }
+});
 
