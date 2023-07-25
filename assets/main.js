@@ -5,13 +5,23 @@ let TaskItems = []
 let CompletedTaskItems = []
 let UncompletedTaskItems = []
 
+
 class Task {
+    #taskItems = [];
     constructor(id, title, description, deadline, completed) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.deadline = deadline;
         this.completed = completed;
+    }
+
+    get taskItems() {
+        return this.#taskItems;
+    }
+
+    set taskItems(value) {
+        this.#taskItems = value;
     }
 
     setId() {
@@ -65,8 +75,7 @@ class Task {
 
         storedTasks.splice(storedTasks.indexOf(item), 1, item); // update item in storedTasks
         localStorage.setItem('tasks', JSON.stringify(storedTasks)); // update storedTasks in local storage
-    }
-
+    }   
     
     submitTask() {
         let title = document.querySelector('#title').value;
@@ -74,9 +83,26 @@ class Task {
         let deadline = document.querySelector('#deadline').value;
         let completed = false;
 
+        if (this.validateDeadline(deadline) === false) {
+            return;
+        }
+
         let task = new Task(this.setId(), title, description, deadline, completed);
         storedTasks.push(task);
         localStorage.setItem('tasks', JSON.stringify(storedTasks));
+    }
+
+    validateDeadline(date) {
+        let today = new Date();
+        let deadline = new Date(date);
+        let difference = deadline - today;
+        let days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        if (days < 0) {
+            alert('Deadline must be in the future');
+            return false;
+        } else {
+            return true;
+        }
     }
 
     deleteTask(id) {
@@ -153,6 +179,16 @@ class CompletedTasks extends Task {
         super(id, title, description, deadline, completed);
     }
 
+    #completedTaskItems = [];
+
+    get completedTaskItems() {
+        return this.#completedTaskItems;
+    }
+
+    set completedTaskItems(value) {
+        this.#completedTaskItems = value;
+    }
+
     deleteTask() {
         let task = document.querySelector(`#task-${this.id}`);
         task.remove();
@@ -176,6 +212,16 @@ class CompletedTasks extends Task {
 class UncompletedTasks extends Task {
     constructor(id, title, description, deadline, completed) {
         super(id, title, description, deadline, completed);
+    }
+
+    #uncompletedTaskItems = [];
+
+    get uncompletedTaskItems() {
+        return this.#uncompletedTaskItems;
+    }
+
+    set uncompletedTaskItems(value) {
+        this.#uncompletedTaskItems = value;
     }
 
     deleteTask() {
@@ -329,3 +375,17 @@ tasksToView.addEventListener('change', () => {
     }
 });
 
+
+
+let all_tasks = localStorage.getItem('tasks') ? JSON.parse(localStorage.getItem('tasks')) : [];
+let completed_tasks = all_tasks.filter(task => task.completed === true);
+let uncompleted_tasks = all_tasks.filter(task => task.completed === false);
+
+let completedTasksCount = document.querySelector('#completed-tasks');
+completedTasksCount.innerHTML = `Completed Tasks: ${completed_tasks.length}`;
+
+let uncompletedTasksCount = document.querySelector('#uncomplete-tasks');
+uncompletedTasksCount.innerHTML = `Uncompleted Tasks: ${uncompleted_tasks.length}`;
+
+let allTasksCount = document.querySelector('#total-tasks');
+allTasksCount.innerHTML = `Total Tasks: ${all_tasks.length}`;
