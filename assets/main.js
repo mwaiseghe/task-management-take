@@ -253,8 +253,7 @@ class App {
                     <p>Deadline: ${task.deadline}</p>
                 </div>
                 <div class="complete-details">
-                    <p id="earlier">Completed Earlier by: ${task.deadlineDuration()} days</p>
-                    <p id="past-deadline">Past Deadline by: ${task.pastDeadline()} days</p>
+                    <p id="earlier">Due by: ${task.deadlineDuration()} days</p>
                 </div>
             </div>
             `;
@@ -271,14 +270,25 @@ class App {
             });
 
             let markCompleteBtn = taskItem.querySelector('.mark-complete-btn');
+            let earlier = taskItem.querySelector('#earlier');
             if (task.completed) {
                 markCompleteBtn.innerHTML = 'Mark Uncompleted';
+
             }
 
             markCompleteBtn.addEventListener('click', () => {
                 task.markCompleted();
                 markCompleteBtn.innerHTML = 'Mark Uncompleted';
             });
+
+            if (task.deadlineDuration() < 0) {
+                earlier.innerHTML = `Late by: ${Math.abs(task.deadlineDuration())} days ago`;
+                earlier.style.color = 'red';
+            } else {
+                earlier.innerHTML = `Due by: ${task.deadlineDuration()} days`;
+            }
+
+
         });
     }
 }
@@ -292,9 +302,6 @@ addTaskForm.addEventListener('submit', (e) => {
     location.reload();
 }
 );
-
-
-
 
 let app = new App();
 app.convertJsonToTask();
